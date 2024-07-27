@@ -25,6 +25,7 @@ app_ui = ui.page_fluid(
         });
     """),
     ui.h3("Response", id="response_header", style="display:none;"),
+    ui.output_text_verbatim("output_area"),  # Use output_text_verbatim for displaying the response
     ui.output_text_verbatim("output"),
     ui.output_text_verbatim("error")
 )
@@ -41,7 +42,10 @@ def server(input, output, session):
     async def query_gpt4():
         case_report = input.case_report()
         try:
+            log = []
+            log.append("Submitting request to GPT-4...")
             print("Submitting request to GPT-4...")
+
             response = await asyncio.wait_for(
                 aclient.chat.completions.create(
                     model="gpt-4",
@@ -57,10 +61,12 @@ def server(input, output, session):
                 ),
                 timeout=30  # Timeout after 30 seconds
             )
+            log.append("Received response from GPT-4.")
             print("Received response from GPT-4.")
             
             # Debug: Print the response
             response_content = response.choices[0].message.content.strip()
+            log.append(f"Response content: {response_content}")
             print("Response content:", response_content)
             
             result_reactive.set(response_content)
@@ -68,15 +74,17 @@ def server(input, output, session):
             response_header_visible.set(True)  # Show the response header
 
         except asyncio.TimeoutError:
+            log.append("Request to GPT-4 timed out.")
             print("Request to GPT-4 timed out.")
             error_reactive.set("Error: Request to GPT-4 timed out.")
-            result_reactive.set("")  # Clear the result if there's an error
+            result_reactive.set("\n".join(log))
             response_header_visible.set(False)  # Hide the response header if there's an error
 
         except Exception as e:
+            log.append(f"An error occurred: {e}")
             print(f"An error occurred: {e}")
             error_reactive.set(f"Error: {str(e)}")
-            result_reactive.set("")  # Clear the result if there's an error
+            result_reactive.set("\n".join(log))
             response_header_visible.set(False)  # Hide the response header if there's an error
 
     @render.text
@@ -88,10 +96,17 @@ def server(input, output, session):
 
     @render.text
     def error_text():
-        return error_reactive.get()
+        current_error = error_reactive.get()
+        print("error_text called. Current error:", current_error)
+        return current_error
+
+    @render.text
+    def output_area():
+        return result_reactive.get()
 
     output.output = output_text
     output.error = error_text
+    output.output_area = output_area
 
     # Control the visibility of the response header
     @reactive.Effect
