@@ -1,8 +1,13 @@
+import os
+from dotenv import load_dotenv
 from shiny import App, ui, reactive, render
 import openai
 
+# Load environment variables from .env file
+load_dotenv()
+
 # Initialize OpenAI API key
-openai.api_key = 'YOUR_OPENAI_API_KEY'
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Define the UI
 app_ui = ui.page_fluid(
@@ -31,9 +36,13 @@ def server(input, output, session):
         result = response.choices[0].text.strip()
         
         # Separate differential diagnoses and disease categories
-        diagnoses, categories = result.split("Broad disease categories:")
-        diagnoses = diagnoses.replace("Differential diagnoses:", "").strip()
-        categories = categories.strip()
+        if "Broad disease categories:" in result:
+            diagnoses, categories = result.split("Broad disease categories:")
+            diagnoses = diagnoses.replace("Differential diagnoses:", "").strip()
+            categories = categories.strip()
+        else:
+            diagnoses = result
+            categories = "Not found"
 
         output.diagnoses.set(diagnoses)
         output.categories.set(categories)
