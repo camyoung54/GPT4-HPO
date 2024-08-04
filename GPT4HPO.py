@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from shiny import App, ui, reactive, render
 from openai import AsyncOpenAI
 import asyncio
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -10,11 +11,22 @@ load_dotenv()
 # Initialize OpenAI API key
 aclient = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Function to query the Clinical Tables HPO API
+async def query_hpo_api(term):
+    api_url = f"https://clinicaltables.nlm.nih.gov/api/hpo/v3/search?terms={term}"
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        response.raise_for_status()
+
 # Define the UI
 app_ui = ui.page_fluid(
     ui.h2("Patient Case Report Analysis Tool"),
-    ui.input_text_area("case_report", "Enter Patient Case Report:", placeholder="Type or paste the patient case report here...", rows=10),
+    ui.input_text_area("case_report", "Enter Patient Case Report:", placeholder="Type or paste the patient case report here...", rows=10, width="100%"),
     ui.input_action_button("submit", "Submit"),
+    ui.br(),  # Add a line break for additional space
+    ui.br(),  # Add another line break for more space
     ui.tags.script("""
         Shiny.addCustomMessageHandler('toggle-response-header', function(show) {
             if (show) {
@@ -24,7 +36,7 @@ app_ui = ui.page_fluid(
             }
         });
     """),
-    ui.h3("Response", id="response_header", style="display:none;"),
+    ui.h3("GPT4HPO Response", id="response_header", style="display:none; margin-top: 20px;"),  # Add margin-top for spacing
     ui.output_text_verbatim("output_area"),  # Use output_text_verbatim for displaying the response
     ui.output_text_verbatim("output"),
     ui.output_text_verbatim("error")
@@ -39,19 +51,38 @@ def server(input, output, session):
 
     @reactive.Effect
     @reactive.event(input.submit)
-    async def query_gpt4():
+    async def process_case_report():
         case_report = input.case_report()
         try:
             log = []
+            log.append("Submitting request to HPO API...")
+            print("Submitting request to HPO API...")
+
+            # Extract terms from the case report (basic example: you might need a more sophisticated method)
+            terms = case_report.split()
+            hpo_terms_info = []
+
+            for term in terms:
+                hpo_response = await query_hpo_api(term)
+                if hpo_response and len(hpo_response) > 2 and isinstance(hpo_response[3], list):
+                    hpo_terms_info.extend(hpo_response[3])
+
+            # Flatten the list and join terms into a string
+            hpo_terms_info_str = "\n".join([item for sublist in hpo_terms_info for item in (sublist if isinstance(sublist, list) else [sublist])])
+            log.append("Received response from HPO API.")
+            print("Received response from HPO API:", hpo_terms_info_str)
+
             log.append("Submitting request to GPT-4...")
             print("Submitting request to GPT-4...")
 
+            # Query GPT-4 with additional information
+            refined_prompt = f"Given the following patient case report and related medical terms, list the potential differential diagnoses and broad disease categories:\n\nCase Report:\n{case_report}\n\nRelated Medical Terms:\n{hpo_terms_info_str}"
             response = await asyncio.wait_for(
                 aclient.chat.completions.create(
                     model="gpt-4",
                     messages=[
                         {"role": "system", "content": "You are a medical expert."},
-                        {"role": "user", "content": f"Given the following patient case report, list the potential differential diagnoses and broad disease categories:\n\n{case_report}"}
+                        {"role": "user", "content": refined_prompt}
                     ],
                     max_tokens=500,  # Reduced max_tokens for faster response
                     temperature=0.7,
@@ -63,12 +94,12 @@ def server(input, output, session):
             )
             log.append("Received response from GPT-4.")
             print("Received response from GPT-4.")
-            
+
             # Debug: Print the response
             response_content = response.choices[0].message.content.strip()
             log.append(f"Response content: {response_content}")
             print("Response content:", response_content)
-            
+
             result_reactive.set(response_content)
             error_reactive.set("")  # Clear any previous errors
             response_header_visible.set(True)  # Show the response header
