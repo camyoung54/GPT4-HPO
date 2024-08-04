@@ -22,7 +22,7 @@ async def query_hpo_api(term):
 
 # Define the UI
 app_ui = ui.page_fluid(
-    ui.h2("Patient Case Report Analysis Tool"),
+    ui.h2("GPT-4 HPO Differential Diagnosis Tool"),
     ui.input_text_area("case_report", "Enter Patient Case Report:", placeholder="Type or paste the patient case report here...", rows=10, width="100%"),
     ui.input_action_button("submit", "Submit"),
     ui.br(),  # Add a line break for additional space
@@ -36,7 +36,7 @@ app_ui = ui.page_fluid(
             }
         });
     """),
-    ui.h3("GPT4HPO Response", id="response_header", style="display:none; margin-top: 20px;"),  # Add margin-top for spacing
+    ui.h3("GPT-4 HPO Response:", id="response_header", style="display:none; margin-top: 20px;"),  # Add margin-top for spacing
     ui.output_text_verbatim("output_area"),  # Use output_text_verbatim for displaying the response
     ui.output_text_verbatim("output"),
     ui.output_text_verbatim("error")
