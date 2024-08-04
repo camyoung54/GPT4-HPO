@@ -57,6 +57,7 @@ The GPT-4 HPO Differential Diagnosis Tool is a web application designed to analy
 ├── README.md               # Project documentation
 ├── requirements.txt        # List of dependencies
 └── .env                    # Environment variables (not included in the repo)
+```
 
 ## Example Case Report
 ```plaintext
