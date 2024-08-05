@@ -70,12 +70,16 @@ def server(input, output, session):
             for term in terms:
                 hpo_response = await query_hpo_api(term)
                 if hpo_response and len(hpo_response) > 2 and isinstance(hpo_response[3], list):
-                    hpo_terms_info.extend(hpo_response[3])
-            
+                    for item in hpo_response[3]:
+                        if isinstance(item, str):
+                            hpo_terms_info.append(item)
+                        elif isinstance(item, list):
+                            hpo_terms_info.extend(item)
+
             # Limiting the number of terms to prevent exceeding the token limit
             hpo_terms_info = hpo_terms_info[:50]
 
-            # Flatten the list and join terms into a string
+            # Ensure all items in hpo_terms_info are strings and join them into a single string
             hpo_terms_info_str = "\n".join(hpo_terms_info)
             log.append("Received response from HPO API.")
             print("Received response from HPO API:", hpo_terms_info_str)
