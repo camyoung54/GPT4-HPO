@@ -58,8 +58,3 @@ The GPT-4 HPO Differential Diagnosis Tool is a web application designed to analy
 ├── requirements.txt        # List of dependencies
 └── .env                    # Environment variables (not included in the repo)
 ```
-
-## Example Case Report
-```plaintext
-A 45-year-old male presents with sudden onset ataxia, dizziness, and double vision. The patient has a history of hypertension and diabetes. Physical examination reveals nystagmus and dysmetria. MRI shows lesions in the cerebellum.
-```
