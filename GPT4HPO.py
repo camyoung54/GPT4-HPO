@@ -9,6 +9,7 @@ import requests
 if 'OPENAI_API_KEY' in os.environ:
     del os.environ['OPENAI_API_KEY']
 
+#test
 # Load environment variables from .env file
 load_dotenv()
 
