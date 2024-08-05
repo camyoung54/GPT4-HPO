@@ -1,15 +1,20 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 from shiny import App, ui, reactive, render
 from openai import AsyncOpenAI
 import asyncio
 import requests
 
+# Clear any existing environment variables that might conflict
+if 'OPENAI_API_KEY' in os.environ:
+    del os.environ['OPENAI_API_KEY']
+
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize OpenAI API key
-aclient = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+api_key = os.getenv('OPENAI_API_KEY')
+aclient = AsyncOpenAI(api_key=api_key)
 
 # Function to query the Clinical Tables HPO API
 async def query_hpo_api(term):
@@ -55,6 +60,33 @@ def server(input, output, session):
     error_reactive = reactive.Value("")
     response_header_visible = reactive.Value(False)
 
+    async def call_gpt4_with_retry(refined_prompt, max_retries=3, initial_delay=2):
+        for attempt in range(max_retries):
+            try:
+                response = await asyncio.wait_for(
+                    aclient.chat.completions.create(
+                        model="gpt-4",
+                        messages=[
+                            {"role": "system", "content": "You are a medical expert."},
+                            {"role": "user", "content": refined_prompt}
+                        ],
+                        max_tokens=500,  # Reduced max_tokens for faster response
+                        temperature=0.7,
+                        top_p=1.0,
+                        frequency_penalty=0.0,
+                        presence_penalty=0.0
+                    ),
+                    timeout=30  # Timeout after 30 seconds
+                )
+                return response
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Error occurred: {e}. Retrying in {initial_delay} seconds...")
+                    await asyncio.sleep(initial_delay)
+                    initial_delay *= 2
+                else:
+                    raise e
+
     @reactive.Effect
     @reactive.event(input.submit)
     async def process_case_report():
@@ -92,21 +124,8 @@ def server(input, output, session):
 
             # Query GPT-4 with additional information
             refined_prompt = f"Given the following patient case report and related medical terms, list the potential differential diagnoses and broad disease categories:\n\nCase Report:\n{case_report}\n\nRelated Medical Terms:\n{hpo_terms_info_str}"
-            response = await asyncio.wait_for(
-                aclient.chat.completions.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "You are a medical expert."},
-                        {"role": "user", "content": refined_prompt}
-                    ],
-                    max_tokens=500,  # Reduced max_tokens for faster response
-                    temperature=0.7,
-                    top_p=1.0,
-                    frequency_penalty=0.0,
-                    presence_penalty=0.0
-                ),
-                timeout=30  # Timeout after 30 seconds
-            )
+            response = await call_gpt4_with_retry(refined_prompt)
+
             log.append("Received response from GPT-4.")
             print("Received response from GPT-4.")
 
