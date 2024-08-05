@@ -20,9 +20,15 @@ async def query_hpo_api(term):
     else:
         response.raise_for_status()
 
+# Function to extract unique terms from the case report
+def extract_terms(case_report):
+    terms = set(case_report.split())  # Using set to get unique terms
+    return list(terms)
+
 # Define the UI
 app_ui = ui.page_fluid(
     ui.h2("GPT-4 HPO Differential Diagnosis Tool"),
+    ui.h5("The GPT-4 HPO Differential Diagnosis Tool is a web application designed to analyze pediatric patient case reports and provide potential differential diagnoses and broad disease categories using GPT-4 from OpenAI. The tool enhances its accuracy by first querying the Human Phenotype Ontology (HPO) API for related medical terms, which are then included in the prompt to GPT-4."),
     ui.input_text_area("case_report", "Enter Patient Case Report:", placeholder="Type or paste the patient case report here...", rows=10, width="100%"),
     ui.input_action_button("submit", "Submit"),
     ui.br(),  # Add a line break for additional space
@@ -58,19 +64,24 @@ def server(input, output, session):
             log.append("Submitting request to HPO API...")
             print("Submitting request to HPO API...")
 
-            # Extract terms from the case report (basic example: you might need a more sophisticated method)
-            terms = case_report.split()
+            terms = extract_terms(case_report)
             hpo_terms_info = []
 
             for term in terms:
                 hpo_response = await query_hpo_api(term)
                 if hpo_response and len(hpo_response) > 2 and isinstance(hpo_response[3], list):
                     hpo_terms_info.extend(hpo_response[3])
+            
+            # Limiting the number of terms to prevent exceeding the token limit
+            hpo_terms_info = hpo_terms_info[:50]
 
             # Flatten the list and join terms into a string
-            hpo_terms_info_str = "\n".join([item for sublist in hpo_terms_info for item in (sublist if isinstance(sublist, list) else [sublist])])
+            hpo_terms_info_str = "\n".join(hpo_terms_info)
             log.append("Received response from HPO API.")
             print("Received response from HPO API:", hpo_terms_info_str)
+
+            # Limit the case report length to avoid exceeding the context length
+            case_report = case_report[:2000]
 
             log.append("Submitting request to GPT-4...")
             print("Submitting request to GPT-4...")

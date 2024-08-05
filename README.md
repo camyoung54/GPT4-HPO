@@ -1,7 +1,7 @@
 # GPT-4 HPO Differential Diagnosis Tool
 
 ## Overview
-The GPT-4 HPO Differential Diagnosis Tool is a web application designed to analyze patient case reports and provide potential differential diagnoses and broad disease categories using GPT-4 from OpenAI. The tool enhances its accuracy by first querying the Clinical Tables HPO API for related medical terms, which are then included in the prompt to GPT-4.
+The GPT-4 HPO Differential Diagnosis Tool is a web application designed to analyze pediatric patient case reports and provide potential differential diagnoses and broad disease categories using GPT-4 from OpenAI. The tool enhances its accuracy by first querying the Human Phenotype Ontology (HPO) API for related medical terms, which are then included in the prompt to GPT-4.
 
 ## Features
 - User-friendly interface to input patient case reports.
