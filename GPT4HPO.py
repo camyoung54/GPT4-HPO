@@ -110,7 +110,7 @@ def server(input, output, session):
                             hpo_terms_info.extend(item)
 
             # Limiting the number of terms to prevent exceeding the token limit
-            hpo_terms_info = hpo_terms_info[:50]
+            hpo_terms_info = hpo_terms_info[:500]
 
             # Ensure all items in hpo_terms_info are strings and join them into a single string
             hpo_terms_info_str = "\n".join(hpo_terms_info)
@@ -118,7 +118,7 @@ def server(input, output, session):
             print("Received response from HPO API:", hpo_terms_info_str)
 
             # Limit the case report length to avoid exceeding the context length
-            case_report = case_report[:2000]
+            case_report = case_report[:5000]
 
             log.append("Submitting request to GPT-4...")
             print("Submitting request to GPT-4...")
